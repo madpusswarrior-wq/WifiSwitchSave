@@ -1,9 +1,9 @@
-# Minimal libnx Makefile — CI safe
+# Minimal libnx Makefile — hardwired paths so -lnx always resolves
 
 TARGET      := SwitchSync
 BUILD       := build
 SOURCES     := source
-INCLUDES    := include
+INCLUDES    :=
 
 APP_TITLE   := SwitchSync
 APP_AUTHOR  := You
@@ -13,13 +13,14 @@ APP_VERSION := 0.1.0
 CFLAGS      := -O2 -ffunction-sections -fdata-sections -Wall -Wextra -Wno-unused-parameter -Wno-unused-variable
 CXXFLAGS    := $(CFLAGS) -fno-rtti -fno-exceptions
 
-# Tell the linker where to find libnx (and portlibs) explicitly
-LIBDIRS     := $(DEVKITPRO)/libnx/lib $(DEVKITPRO)/portlibs/switch/lib
+# Point directly at libnx headers & libs + specs
+CPPFLAGS    := -I$(DEVKITPRO)/libnx/include -I$(DEVKITPRO)/portlibs/switch/include
+LDFLAGS     := -L$(DEVKITPRO)/libnx/lib -L$(DEVKITPRO)/portlibs/switch/lib -specs=$(DEVKITPRO)/libnx/switch.specs
 LIBS        := -lnx
 
 # Default target so make always has one
 .PHONY: all
 all: $(TARGET).nro
 
-# Pull in libnx rules (defines build/link steps)
+# libnx build rules (uses the vars above)
 include $(DEVKITPRO)/libnx/switch_rules
