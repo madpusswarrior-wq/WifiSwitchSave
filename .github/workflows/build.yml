@@ -2,21 +2,38 @@ name: Build SwitchSync (.nro)
 
 on:
   push:
-    branches: [ "**" ]
+    branches: ["**"]
   workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
     container: devkitpro/devkita64:latest
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      # Make sure libnx (and switch_rules) exist inside the container
+      - name: Ensure libnx is present
+        run: |
+          set -e
+          . /etc/profile.d/devkit-env.sh
+          if [ ! -f "$DEVKITPRO/libnx/switch_rules" ]; then
+            dkp-pacman -Syu --noconfirm
+            dkp-pacman -S --needed --noconfirm libnx devkit-env devkitA64 switch-tools switch-cmake switch-pkg-config
+          fi
+          ls -l "$DEVKITPRO/libnx/switch_rules"
+
       - name: Build .nro
         run: |
           . /etc/profile.d/devkit-env.sh
+          # Normalize line endings just in case
+          perl -pi -e 's/\r\n/\n/g' Makefile
+          find source -type f -name '*.cpp' -print0 | xargs -0 perl -pi -e 's/\r\n/\n/g'
           make -j
           ls -l *.nro || true
+
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
