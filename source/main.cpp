@@ -28,25 +28,21 @@ static void action_auto_pair_sync() {
 static void draw_menu(int cursor, const char** items, int n) {
     consoleClear();
     printf("SwitchSync — Skeleton v0.1\n\n");
-    for (int i=0;i<n;i++) {
-        printf("%s %s\n", (i==cursor?">":" "), items[i]);
-    }
+    for (int i=0;i<n;i++) printf("%s %s\n", (i==cursor?">":" "), items[i]);
     printf("\nA=select  B=back  +=exit\n");
 }
 
 int main(int argc, char** argv) {
     consoleInit(NULL);
-
     padConfigureInput(1, HidNpadStyleSet_NpadStandard);
     PadState pad; padInitializeDefault(&pad);
 
-    int cursor = 0;
     const char* items[] = {
         "Export Local Titles (CSV) — STUB",
         "Auto-Pair & Sync — STUB",
         "Exit"
     };
-    const int nItems = sizeof(items)/sizeof(items[0]);
+    int cursor = 0, nItems = sizeof(items)/sizeof(items[0]);
 
     while (appletMainLoop()) {
         draw_menu(cursor, items, nItems);
@@ -59,10 +55,9 @@ int main(int argc, char** argv) {
             else if (cursor==1) action_auto_pair_sync();
             else break;
         }
-        if (kDown & HidNpadButton_Plus || kDown & HidNpadButton_B) break;
+        if (kDown & (HidNpadButton_Plus|HidNpadButton_B)) break;
         consoleUpdate(NULL);
     }
-
     consoleExit(NULL);
     return 0;
 }
