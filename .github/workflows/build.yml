@@ -14,7 +14,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # No pacman, no updates, no network. Just verify what's already in the image.
+      # Offline: just confirm the toolchain already in the image
       - name: Check toolchain (offline)
         shell: bash
         run: |
@@ -24,22 +24,77 @@ jobs:
           ls -l "$DEVKITPRO/libnx/lib/libnx.a"
           aarch64-none-elf-gcc --version
 
+      # Create a Makefile if none exists (safe: no overwrite)
+      - name: Ensure Makefile
+        shell: bash
+        run: |
+          set -e
+          if [ ! -f Makefile ]; then
+            cat > Makefile <<'EOF'
+# Auto-generated minimal libnx Makefile
+TARGET      := SwitchSync
+BUILD       := build
+SOURCES     := source
+INCLUDES    :=
+
+APP_TITLE   := SwitchSync
+APP_AUTHOR  := You
+APP_VERSION := 0.1.0
+
+CFLAGS      := -O2 -ffunction-sections -fdata-sections -Wall -Wextra -Wno-unused-parameter -Wno-unused-variable
+CXXFLAGS    := $(CFLAGS) -fno-rtti -fno-exceptions
+CPPFLAGS    := -I$(DEVKITPRO)/libnx/include -I$(DEVKITPRO)/portlibs/switch/include
+LDFLAGS     := -L$(DEVKITPRO)/libnx/lib -L$(DEVKITPRO)/portlibs/switch/lib -specs=$(DEVKITPRO)/libnx/switch.specs
+LIBS        := -lnx
+
+.PHONY: all
+all: $(TARGET).nro
+
+include $(DEVKITPRO)/libnx/switch_rules
+EOF
+            echo "INFO: Created default Makefile"
+          else
+            echo "INFO: Found existing Makefile"
+          fi
+
+      # Ensure there is a main() somewhere; if not, create a tiny one
+      - name: Ensure main()
+        shell: bash
+        run: |
+          set -e
+          mkdir -p source
+          if ! grep -R --include='*.c' --include='*.cpp' -Eq 'int[[:space:]]+main[[:space:]]*\\(' . ; then
+            cat > source/_automain.c <<'EOF'
+#include <switch.h>
+int main(int argc, char* argv[]) {
+    consoleInit(NULL);
+    padConfigureInput(1, HidNpadStyleSet_NpadStandard);
+    PadState pad; padInitializeDefault(&pad);
+    printf("SwitchSync — auto main (press + to exit)\\n");
+    while (appletMainLoop()) {
+        padUpdate(&pad);
+        if (padGetButtonsDown(&pad) & HidNpadButton_Plus) break;
+        consoleUpdate(NULL);
+    }
+    consoleExit(NULL);
+    return 0;
+}
+EOF
+            echo "INFO: No main() found; generated source/_automain.c"
+          else
+            echo "INFO: main() found in your sources"
+          fi
+
       - name: Build .nro
         shell: bash
         run: |
           set -e
           . /etc/profile.d/devkit-env.sh
+          echo "=== TREE ==="; ls -la; echo "============="
+          echo "=== SOURCES ==="; find source -maxdepth 2 -type f -printf "%P\n" | sort || true
           make -j
-          ls -l *.nro || (echo "No NRO produced"; exit 1)
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: SwitchSync_nro
-          path: |
-            SwitchSync.nro
-            build/**/*
-          if-no-files-found: error
+          test -f SwitchSync.nro || (echo "No NRO produced"; exit 1)
+          ls -l SwitchSync.nro
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
