@@ -15,22 +15,12 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Ensure devkitA64 + libnx
+        shell: bash
         run: |
           set -e
           . /etc/profile.d/devkit-env.sh
           dkp-pacman -Syu --noconfirm
-          dkp-pacman -S --needed --noconfirm devkitA64 libnx switch-tools switch-cmake switch-pkg-config
-          test -f "$DEVKITPRO/libnx/lib/libnx.a"
-          ls -l "$DEVKITPRO/libnx/switch_rules"
 
-      - name: Show repo files
-        run: |
-          pwd
-          ls -la
-          echo "---- source dir"
-          ls -la source || true
-          echo "---- any main definitions?"
-          grep -R --line-number "int main" || true
 
       # Fallback: if source/main.c doesn't exist, create a tiny stub so the build still succeeds
       - name: Create fallback main if missing
