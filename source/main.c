@@ -3,7 +3,6 @@
 int main(int argc, char* argv[]) {
     consoleInit(NULL);
 
-    // Simple input using the Pad API (libnx 4.x)
     padConfigureInput(1, HidNpadStyleSet_NpadStandard);
     PadState pad;
     padInitializeDefault(&pad);
