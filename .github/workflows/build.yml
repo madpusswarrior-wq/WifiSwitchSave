@@ -14,16 +14,17 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # Make 100% sure toolchain + libnx are installed in the container
+      # Ensure toolchain + libnx are present (idempotent)
       - name: Ensure devkitA64 + libnx
         run: |
           set -e
           . /etc/profile.d/devkit-env.sh
           dkp-pacman -Syu --noconfirm
           dkp-pacman -S --needed --noconfirm devkitA64 libnx switch-tools switch-cmake switch-pkg-config
-          which aarch64-none-elf-g++
-          ls -l "$DEVKITPRO/libnx/switch_rules" || true
-          ls -la "$DEVKITPRO/libnx/lib" || true
+          # Confirm libnx exists (hard fail if missing)
+          test -f "$DEVKITPRO/libnx/lib/libnx.a"
+          ls -l "$DEVKITPRO/libnx/switch_rules"
+          ls -l "$DEVKITPRO/libnx/lib/libnx.a"
 
       - name: Build .nro
         run: |
@@ -32,11 +33,11 @@ jobs:
           # Normalize endings just in case
           perl -pi -e 's/\r\n/\n/g' Makefile
           find source -type f -name '*.cpp' -print0 | xargs -0 perl -pi -e 's/\r\n/\n/g'
-          # Force the correct cross tools so we never call host 'ld'
+          # Force the correct cross tools (avoid host ld)
           make -j \
-            CC=aarch64-none-elf-gcc \
-            CXX=aarch64-none-elf-g++ \
-            LD=aarch64-none-elf-g++
+            CC=/opt/devkitpro/devkitA64/bin/aarch64-none-elf-gcc \
+            CXX=/opt/devkitpro/devkitA64/bin/aarch64-none-elf-g++ \
+            LD=/opt/devkitpro/devkitA64/bin/aarch64-none-elf-g++
           ls -l *.nro || true
 
       - name: Upload artifact
