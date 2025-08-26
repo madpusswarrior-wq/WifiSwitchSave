@@ -14,14 +14,15 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Ensure toolchain
+      # No pacman, no updates, no network. Just verify what's already in the image.
+      - name: Check toolchain (offline)
         shell: bash
         run: |
           set -e
           . /etc/profile.d/devkit-env.sh
-          dkp-pacman -Syu --noconfirm
-          dkp-pacman -S --needed --noconfirm devkitA64 libnx switch-tools switch-cmake switch-pkg-config
-          test -f "$DEVKITPRO/libnx/lib/libnx.a"
+          echo "DEVKITPRO=$DEVKITPRO"
+          ls -l "$DEVKITPRO/libnx/lib/libnx.a"
+          aarch64-none-elf-gcc --version
 
       - name: Build .nro
         shell: bash
@@ -29,7 +30,16 @@ jobs:
           set -e
           . /etc/profile.d/devkit-env.sh
           make -j
-          ls -l *.nro || true
+          ls -l *.nro || (echo "No NRO produced"; exit 1)
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: SwitchSync_nro
+          path: |
+            SwitchSync.nro
+            build/**/*
+          if-no-files-found: error
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
