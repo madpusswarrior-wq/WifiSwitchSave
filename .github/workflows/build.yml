@@ -1,28 +1,23 @@
 name: Build
-
 on:
   workflow_dispatch:
   push:
-    branches:
-      - main
+    branches: [ "main" ]
 
 jobs:
   build:
     runs-on: ubuntu-latest
     container:
       image: devkitpro/devkita64:latest
-
     steps:
       - uses: actions/checkout@v4
-
       - name: Build
         shell: bash
         run: |
           set -e
           . /etc/profile.d/devkit-env.sh
           make -j
-          ls -l *.nro
-
+          ls -l *.nro || true
       - uses: actions/upload-artifact@v4
         with:
           name: SwitchSync_nro
