@@ -12,8 +12,7 @@ int main(int argc, char* argv[]) {
 
     while (appletMainLoop()) {
         padUpdate(&pad);
-        u64 kDown = padGetButtonsDown(&pad);
-        if (kDown & HidNpadButton_Plus) break;
+        if (padGetButtonsDown(&pad) & HidNpadButton_Plus) break;
         consoleUpdate(NULL);
     }
 
