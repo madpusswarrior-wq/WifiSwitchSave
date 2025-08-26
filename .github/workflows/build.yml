@@ -14,24 +14,29 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # Make sure libnx (and switch_rules) exist inside the container
-      - name: Ensure libnx is present
+      # Make 100% sure toolchain + libnx are installed in the container
+      - name: Ensure devkitA64 + libnx
         run: |
           set -e
           . /etc/profile.d/devkit-env.sh
-          if [ ! -f "$DEVKITPRO/libnx/switch_rules" ]; then
-            dkp-pacman -Syu --noconfirm
-            dkp-pacman -S --needed --noconfirm libnx devkit-env devkitA64 switch-tools switch-cmake switch-pkg-config
-          fi
-          ls -l "$DEVKITPRO/libnx/switch_rules"
+          dkp-pacman -Syu --noconfirm
+          dkp-pacman -S --needed --noconfirm devkitA64 libnx switch-tools switch-cmake switch-pkg-config
+          which aarch64-none-elf-g++
+          ls -l "$DEVKITPRO/libnx/switch_rules" || true
+          ls -la "$DEVKITPRO/libnx/lib" || true
 
       - name: Build .nro
         run: |
+          set -e
           . /etc/profile.d/devkit-env.sh
-          # Normalize line endings just in case
+          # Normalize endings just in case
           perl -pi -e 's/\r\n/\n/g' Makefile
           find source -type f -name '*.cpp' -print0 | xargs -0 perl -pi -e 's/\r\n/\n/g'
-          make -j
+          # Force the correct cross tools so we never call host 'ld'
+          make -j \
+            CC=aarch64-none-elf-gcc \
+            CXX=aarch64-none-elf-g++ \
+            LD=aarch64-none-elf-g++
           ls -l *.nro || true
 
       - name: Upload artifact
